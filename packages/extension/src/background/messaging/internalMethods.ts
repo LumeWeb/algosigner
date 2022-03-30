@@ -1170,4 +1170,32 @@ export class InternalMethods {
     });
     return true;
   }
+
+  public static [JsonRpcMethod.GetDomains](request: any, sendResponse: Function) {
+    const { ledger, searchTerm } = request.body.params;
+    const baseLedgers = getBaseSupportedLedgers();
+    console.log(`searching for ${searchTerm} on ${ledger}`);
+
+    if (baseLedgers.map((l) => l.uniqueName).includes(ledger.toLowerCase())) {
+      fetch(`https://api.${ledger}.nf.domains/nfd/${searchTerm}`)
+        .then((response) => {
+          console.log(response);
+          return response.json().then((json) => {
+            console.log(json);
+            const address = (json['caAlgo'] && json['caAlgo'][0]) || null;
+            if (response.ok) {
+              sendResponse({ address: address });
+            } else {
+              sendResponse({ error: json.message });
+            }
+          });
+        })
+        .catch((e) => {
+          sendResponse({ error: e.message });
+        });
+    } else {
+      sendResponse({ error: 'Domain lookup not supported on custom networks.' });
+    }
+    return true;
+  }
 }

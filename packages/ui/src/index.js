@@ -57,7 +57,7 @@ const App = () => {
             <${Login} path="/login/:redirect?" />
             <${Root} path="/:*?">
               <${MainHeader} />
-              <div style="overflow: auto; flex: 1; display: flex; flex-direction: column;">
+              <div style="overflow-y: auto; overflow-x: hidden; flex: 1; display: flex; flex-direction: column;">
                 <${Router}>
                   <${Wallet} path="/wallet" />
                   <${CreateAccount} path="/:ledger/create-account" />

@@ -4,19 +4,25 @@ import { useState, useContext, useEffect, useRef } from 'preact/hooks';
 import { route } from 'preact-router';
 import { JsonRpcMethod } from '@algosigner/common/messaging/types';
 
+import { StoreContext } from 'services/StoreContext';
 import { sendMessage } from 'services/Messaging';
 import { assetFormat, numFormat } from 'services/common';
-
-import { StoreContext } from 'services/StoreContext';
 
 import HeaderView from 'components/HeaderView';
 import Authenticate from 'components/Authenticate';
 import ContactPreview from 'components/ContactPreview';
+
+import nfd from 'assets/nfd.png';
 import algosdk from 'algosdk';
+
+const DOMAINS_TIMER = 2000;
+const DOMAINS_MIN_LENGTH = 8; // 3 Minimum letters + 1 separator + 4 letters of 'algo'
+const DOMAIN_REGEX = /^.+\.algo$/;
 
 const SendAlgos: FunctionalComponent = (props: any) => {
   const store: any = useContext(StoreContext);
   const { matches, ledger, address } = props;
+  const inputRef = useRef<HTMLHeadingElement>(null);
 
   const [, forceUpdate] = useState<boolean>(false);
   const [account, setAccount] = useState<any>({});
@@ -25,19 +31,21 @@ const SendAlgos: FunctionalComponent = (props: any) => {
   const [modalActive, setModalActive] = useState<boolean>(false);
   // Asset {} is Algos
   const [asset, setAsset] = useState<any>({});
+  const [amount, setAmount] = useState('');
   const [to, setTo] = useState('');
+  const [note, setNote] = useState('');
+  const [txId, setTxId] = useState('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [domainAddress, setDomainAddress] = useState<any>(undefined);
   const [contacts, setContacts] = useState<Array<any>>([]);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [addingContact, setAddingContact] = useState<boolean>(false);
   const [newContactName, setNewContactName] = useState<string>('');
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
-  const [txId, setTxId] = useState('');
   const [loading, setLoading] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const inputRef = useRef<HTMLHeadingElement>(null);
 
+  // Initial setup
   useEffect(() => {
     for (let i = store[ledger].length - 1; i >= 0; i--) {
       if (store[ledger][i].address === address) {
@@ -54,16 +62,13 @@ const SendAlgos: FunctionalComponent = (props: any) => {
       }
     });
   }, []);
-
   useEffect(() => {
     if (inputRef !== null && inputRef.current !== null) {
       inputRef.current.focus();
     }
   }, [selectedContact]);
 
-  let ddClass: string = 'dropdown is-right';
-  if (ddActive) ddClass += ' is-active';
-
+  // Transaction signing
   const selectAsset = (selectedAsset) => {
     setDdActive(false);
 
@@ -87,20 +92,6 @@ const SendAlgos: FunctionalComponent = (props: any) => {
       });
     }
   };
-
-  const handleAmountChange = (val, ass) => {
-    const decimals = 'decimals' in ass ? ass.decimals : 6;
-    const integer = decimals >= 16 ? 1 : 16 - decimals;
-    let re;
-    if (decimals > 0) re = new RegExp(`\\d{1,${integer}}(\\.\\d{0,${decimals}})?`);
-    else re = new RegExp(`\\d{1,16}`);
-
-    const finalVal = val.match(re);
-    if (finalVal) setAmount(finalVal[0]);
-    else setAmount('');
-    forceUpdate((n) => !n);
-  };
-
   const sendTx = async (pwd: string) => {
     setLoading(true);
     setAuthError('');
@@ -122,7 +113,7 @@ const SendAlgos: FunctionalComponent = (props: any) => {
       address: account.address,
       txnParams: {
         from: account.address,
-        to: to || selectedContact && selectedContact.address,
+        to: domainAddress || to || (selectedContact && selectedContact.address),
         note: note,
         amount: amountToSend,
       },
@@ -153,7 +144,6 @@ const SendAlgos: FunctionalComponent = (props: any) => {
       }
     });
   };
-
   const saveContact = () => {
     const params = {
       name: newContactName,
@@ -171,23 +161,83 @@ const SendAlgos: FunctionalComponent = (props: any) => {
     });
   };
 
-  const goBack = () => {
-    route(`/${matches.ledger}/${matches.address}`);
-  }
+  // Domains search and handling
+  let searchTimer;
+  const searchDomains = async (searchTerm) => {
+    console.log(`Searching for ${searchTerm}`);
+    const params = { ledger: ledger, searchTerm: searchTerm };
+    sendMessage(JsonRpcMethod.GetDomains, params, (response) => {
+      console.log(response);
+      setSearchTerm('');
+      if ('address' in response) {
+        setDomainAddress(response['address']);
+      } else {
+        setDomainAddress(null);
+      }
+    });
+  };
+  const handleTimeout = async (searchTerm) => {
+    console.log(`executing domain lookup for ${searchTerm}`);
+    clearTimeout(searchTimer);
+    searchTimer = undefined;
+    await searchDomains(searchTerm);
+  };
+  const handleAddressChange = (value) => {
+    console.log(`looking for domains for ${value}, matching: ${DOMAIN_REGEX.test(value)}`);
+    setTo(value);
+    setDomainAddress(undefined);
+    if (value && value.length >= DOMAINS_MIN_LENGTH && DOMAIN_REGEX.test(value)) {
+      console.log(`setting term to ${value} and queueing lookup`);
+      setSearchTerm(value);
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => handleTimeout(value), DOMAINS_TIMER);
+    } else {
+      setSearchTerm('');
+      console.log(`timeout timer is: (${searchTimer})`);
+      if (searchTimer) {
+        clearTimeout(searchTimer);
+        searchTimer = undefined;
+      }
+    }
+  };
 
-  const youIndicator = html`<b class="has-text-link">YOU</b>`;
+  // Contact (de)selection
   const onSelectContact = (c) => {
     setSelectedContact(c);
     setTo('');
+    setDomainAddress(undefined);
     setModalActive(false);
   };
   const deselectContact = () => {
     setTo(selectedContact.address);
+    setDomainAddress(undefined);
     setSelectedContact(null);
-  }
+  };
 
-  const disabled = (!selectedContact && !algosdk.isValidAddress(to)) || +amount < 0;
+  // Other UI functions and variables
+  const goBack = () => {
+    route(`/${matches.ledger}/${matches.address}`);
+  };
+  const handleAmountChange = (val, ass) => {
+    const decimals = 'decimals' in ass ? ass.decimals : 6;
+    const integer = decimals >= 16 ? 1 : 16 - decimals;
+    let re;
+    if (decimals > 0) re = new RegExp(`\\d{1,${integer}}(\\.\\d{0,${decimals}})?`);
+    else re = new RegExp(`\\d{1,16}`);
 
+    const finalVal = val.match(re);
+    if (finalVal) setAmount(finalVal[0]);
+    else setAmount('');
+    forceUpdate((n) => !n);
+  };
+
+  let ddClass: string = 'dropdown is-right';
+  if (ddActive) ddClass += ' is-active';
+  const youIndicator = html`<b class="has-text-link">YOU</b>`;
+  const disabled =
+    (!selectedContact && !algosdk.isValidAddress(to) && !domainAddress) || +amount < 0;
+
+  // Render HTML
   return html`
     <div class="main-view" style="flex-direction: column; justify-content: space-between;">
       <div class="modal ${modalActive && 'is-active'}">
@@ -316,15 +366,40 @@ const SendAlgos: FunctionalComponent = (props: any) => {
           ${!selectedContact &&
           html`
             <textarea
-              placeholder="To address"
+              placeholder="To address/domain"
               class="textarea has-fixed-size mb-4 pr-6"
               style="resize: none; margin-top: -22px;"
               id="toAddress"
               value=${to}
               ref=${inputRef}
               rows="2"
-              onInput=${(e) => setTo(e.target.value)}
+              onInput=${(e) => handleAddressChange(e.target.value)}
             />
+            ${(searchTerm || domainAddress || domainAddress === null) &&
+            html`
+              <div
+                style="position: relative; left: 91%; ${searchTerm
+                  ? 'bottom: 2rem; margin-top: -1rem;'
+                  : 'bottom: 1rem; margin-top: -1.75rem;'}
+                  "
+              >
+                ${searchTerm && html`<span class="loader" />`}
+                ${!searchTerm &&
+                html`
+                  <span
+                    class="has-tooltip-arrow has-tooltip-left has-tooltip-fade has-tooltip-multiline"
+                    data-tooltip="${'Linked address: ' + domainAddress ||
+                    'No address found for this domain.'}"
+                  >
+                    <img
+                      src=${nfd}
+                      width="20"
+                      style="${!domainAddress && 'filter: grayscale(100%);'}"
+                    />
+                  </span>
+                `}
+              </div>
+            `}
           `}
           ${selectedContact &&
           html`
@@ -386,7 +461,7 @@ const SendAlgos: FunctionalComponent = (props: any) => {
             <p>Transaction sent with ID:</p>
             <p id="txId" class="mb-4" style="word-break: break-all;">${txId}</p>
             ${!selectedContact &&
-            !contacts.find((c) => c.address === to) &&
+            !contacts.find((c) => c.address === to || c.address === domainAddress) &&
             html`
               <p>This address is not on your contact list, would you like to save it?</p>
               ${addingContact &&

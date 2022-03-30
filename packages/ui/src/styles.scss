@@ -41,19 +41,6 @@ $tabs-toggle-link-active-border-color: $blue-light;
 $modal-close-right: 4px;
 $modal-close-top: 8px;
 
-// TOOLTIP
-$tooltip-background-opacity: 1;
-
-[data-tooltip]:not(.is-loading).has-tooltip-bottom.has-tooltip-bottom-left::before{
-  width: fit-content;
-  transform: translate(-5%, 100%);
-}
-
-[data-tooltip]:not(.is-loading).has-tooltip-bottom.has-tooltip-bottom-right::before{
-  width: fit-content;
-  transform: translate(-90%, 100%);
-}
-
 // BOX
 // $box-shadow: none;
 
@@ -116,6 +103,22 @@ a:hover {
 
 span[data-tooltip] {
   cursor: help !important;
+}
+
+$tooltip-background-opacity: 1;
+
+[data-tooltip]:not(.is-loading).has-tooltip-bottom.has-tooltip-bottom-left::before{
+  width: fit-content;
+  transform: translate(-5%, 100%);
+}
+
+[data-tooltip]:not(.is-loading).has-tooltip-bottom.has-tooltip-bottom-right::before{
+  width: fit-content;
+  transform: translate(-90%, 100%);
+}
+
+[data-tooltip]:not(.is-loading).has-tooltip-multiline::before {
+  word-break: break-word;
 }
 
 // Custom classes
