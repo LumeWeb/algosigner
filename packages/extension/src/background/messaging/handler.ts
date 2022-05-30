@@ -56,7 +56,7 @@ export class OnMessageHandler extends RequestValidation {
     const id = body.id;
 
     // Check if the message comes from the extension
-    if (isFromExtension(sender.origin)) {
+    if (isFromExtension(sender)) {
       // Message from extension
       switch (source) {
         // Message from extension to dapp

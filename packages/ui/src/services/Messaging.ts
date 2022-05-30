@@ -1,7 +1,8 @@
 import { JsonRpcMethod } from '@algosigner/common/messaging/types';
+import {extensionBrowser} from "@algosigner/common/chrome";
 
-export function sendMessage(method: JsonRpcMethod, params: any, callback: any) {
-    chrome.runtime.sendMessage({
+export async function sendMessage(method: JsonRpcMethod, params: any, callback: any): Promise<void> {
+   const response = await extensionBrowser.runtime.sendMessage({
         source:'ui',
         body: {
             jsonrpc: '2.0',
@@ -9,5 +10,6 @@ export function sendMessage(method: JsonRpcMethod, params: any, callback: any) {
             params: params,
             id: (+new Date).toString(16)
         }
-    }, callback);
+    });
+   callback(response);
 }

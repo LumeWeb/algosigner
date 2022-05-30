@@ -20,8 +20,10 @@
     "webpack-cli": "^4.9.0"
   },
   "dependencies": {
+    "@types/webextension-polyfill": "^0.8.3",
     "algosdk": "1.16.0",
-    "buffer": "^6.0.3"
+    "buffer": "^6.0.3",
+    "webextension-polyfill": "github:LumeWeb/webextension-polyfill"
   },
   "scripts": {
     "build": "npm run clean && npm run bundle && npm run copy",

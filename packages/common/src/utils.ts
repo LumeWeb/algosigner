@@ -1,9 +1,11 @@
-import { extensionBrowser } from './chrome';
 import { getBaseSupportedLedgers } from './types/ledgers';
+import {extensionBrowser} from "./chrome";
+import {Runtime} from "webextension-polyfill";
 
-export function isFromExtension(origin: string): boolean {
-  const s = origin.split('://');
-  return s[0] === 'chrome-extension' && s[1] === extensionBrowser.runtime.id;
+export function isFromExtension(sender: Runtime.MessageSender): boolean {
+  // @ts-ignore
+  const s = (sender?.origin || sender?.url).split('://');
+  return ['chrome-extension','moz-extension'].includes(s[0]) && sender?.id === extensionBrowser.runtime.id;
 }
 
 /**
@@ -22,7 +24,7 @@ export function removeEmptyFields(obj: { [index: string]: any }): any {
 
 /**
  * Check if a ledger belongs to our base supported ledgers (e.g: links to GoalSeeker)
- * @param ledger 
+ * @param ledger
  * @returns boolean
  */
 export function isLedgerBaseSupported(ledger: string): boolean {
@@ -32,7 +34,7 @@ export function isLedgerBaseSupported(ledger: string): boolean {
 /**
  * Converts full addresses into a shorter format:
  * AAAAAAAAAA.....AAAAAAAAAA
- * @param address 
+ * @param address
  * @returns string
  */
 export function obfuscateAddress(address: string): string {

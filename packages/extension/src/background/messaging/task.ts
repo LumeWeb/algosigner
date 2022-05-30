@@ -35,18 +35,19 @@ import { buildTransaction } from '../utils/transactionBuilder';
 import { getSigningAccounts } from '../utils/multisig';
 import { base64ToByteArray, byteArrayToBase64 } from '@algosigner/common/encoding';
 import { removeEmptyFields } from '@algosigner/common/utils';
+import {Windows} from "webextension-polyfill";
 
 // Additional space for the title bar
 const titleBarHeight = 28;
 
-const authPopupProperties = {
+const authPopupProperties: Windows.CreateCreateDataType = {
   type: 'popup',
   focused: true,
   width: 400,
   height: 550 + titleBarHeight,
 };
 
-const signPopupProperties = {
+const signPopupProperties: Windows.CreateCreateDataType = {
   type: 'popup',
   focused: true,
   width: 400,
@@ -198,7 +199,7 @@ export class Task {
     };
     let url = conn.url;
     if (conn.port.length > 0) url += ':' + conn.port;
-    
+
     await Task.fetchAPI(`${url}${sendPath}`, fetchParams).then((account) => {
       // Use authAddr or empty string
       const chainAuthAddr = account['auth-addr'] || '';
@@ -230,9 +231,9 @@ export class Task {
             (walletTx.authAddr != null && typeof walletTx.authAddr !== 'string') ||
             (walletTx.message != null && typeof walletTx.message !== 'string') ||
             (!walletTx.txn || typeof walletTx.txn !== 'string') ||
-            (walletTx.signers != null && 
+            (walletTx.signers != null &&
               (
-                !Array.isArray(walletTx.signers) || 
+                !Array.isArray(walletTx.signers) ||
                 (Array.isArray(walletTx.signers) && (walletTx.signers as Array<any>).some((s)=>typeof s !== 'string'))
               )
             ) ||
@@ -246,8 +247,8 @@ export class Task {
               (!walletTx.msig.threshold || typeof walletTx.msig.threshold !== 'number') ||
               (!walletTx.msig.version || typeof walletTx.msig.version !== 'number') ||
               (
-                !walletTx.msig.addrs || 
-                !Array.isArray(walletTx.msig.addrs) || 
+                !walletTx.msig.addrs ||
+                !Array.isArray(walletTx.msig.addrs) ||
                 (Array.isArray(walletTx.msig.addrs) && (walletTx.msig.addrs as Array<any>).some((s)=>typeof s !== 'string'))
               )
             )
@@ -289,7 +290,7 @@ export class Task {
               InternalMethods.checkValidAccount(genesisID, wrap.transaction.from);
             }
             else if (authAddr && signers.length === 1 && authAddr !== signers[0]){
-              // We have an authAddr so if signers is length of 1 then they must be equal 
+              // We have an authAddr so if signers is length of 1 then they must be equal
               throw RequestError.InvalidFormat;
             }
           }
@@ -304,7 +305,7 @@ export class Task {
               throw RequestError.UnsupportedAlgod;
             }
 
-            // If there is an auth address then we SHOULD validate it is on chain and warn if not present      
+            // If there is an auth address then we SHOULD validate it is on chain and warn if not present
             await Task.getChainAuthAddress(processedTx, (chainAuthAddr) => {
               // If there was an auth address on chain then set the auth address for the transaction
               if (authAddr !== chainAuthAddr){
@@ -420,24 +421,21 @@ export class Task {
 
         request.body.params.transactionWraps = transactionWraps;
 
-        extensionBrowser.windows.create(
+        const w =  await extensionBrowser.windows.create(
           {
             url: extensionBrowser.runtime.getURL('index.html#/sign-v2-transaction'),
-            ...signPopupProperties,
-          },
-          function (w) {
-            if (w) {
+              ...signPopupProperties,
+          }        );
+          if (w) {
               Task.requests[request.originTabID] = {
-                window_id: w.id,
-                message: request,
+                  window_id: w.id,
+                  message: request,
               };
               // Send message with tx info
               setTimeout(function () {
-                extensionBrowser.runtime.sendMessage(request);
+                  extensionBrowser.runtime.sendMessage(request);
               }, 500);
-            }
           }
-        );
       }
     } catch (e) {
       let data = '';
@@ -466,34 +464,32 @@ export class Task {
     return {
       public: {
         // authorization
-        [JsonRpcMethod.Authorization]: (d: any) => {
-          // Delete any previous request made from the Tab that it's
-          // trying to connect.
-          delete Task.requests[d.originTabID];
+        [JsonRpcMethod.Authorization]: async (d: any) => {
+            // Delete any previous request made from the Tab that it's
+            // trying to connect.
+            delete Task.requests[d.originTabID];
 
-          // If access was already granted, authorize connection.
-          if (Task.isAuthorized(d.origin)) {
-            d.response = {};
-            MessageApi.send(d);
-          } else {
-            extensionBrowser.windows.create(
-              {
-                url: extensionBrowser.runtime.getURL('index.html#/authorize'),
-                ...authPopupProperties,
-              },
-              function (w: any) {
+            // If access was already granted, authorize connection.
+            if (Task.isAuthorized(d.origin)) {
+                d.response = {};
+                MessageApi.send(d);
+            } else {
+                const w = await extensionBrowser.windows.create(
+                    {
+                        url: extensionBrowser.runtime.getURL('index.html#/authorize'),
+                        ...authPopupProperties,
+                    }
+                );
                 if (w) {
-                  Task.requests[d.originTabID] = {
-                    window_id: w.id,
-                    message: d,
-                  };
-                  setTimeout(function () {
-                    extensionBrowser.runtime.sendMessage(d);
-                  }, 500);
+                    Task.requests[d.originTabID] = {
+                        window_id: w.id,
+                        message: d,
+                    };
+                    setTimeout(function () {
+                        extensionBrowser.runtime.sendMessage(d);
+                    }, 500);
                 }
-              }
-            );
-          }
+            }
         },
         // handle-wallet-transactions
         [JsonRpcMethod.SignWalletTransaction]: async (
@@ -827,7 +823,7 @@ export class Task {
                   // Create an encoded transaction for the ledger sign
                   const encodedTxn =  Buffer.from(algosdk.encodeUnsignedTransaction(builtTx)).toString('base64');
                   message.body.params.encodedTxn = encodedTxn;
-                  
+
                   InternalMethods[JsonRpcMethod.LedgerSignTransaction](message, (response) => {
                     // We only have to worry about possible errors here
                     if ('error' in response) {
@@ -1041,7 +1037,7 @@ export class Task {
                       }
                     });
                   }
-                } 
+                }
                 else if (authAddr) {
                   neededAccounts.push(authAddr);
                 }
@@ -1147,11 +1143,11 @@ export class Task {
                         }
 
                         // Now that we know it is a single group adjust the transaction property to be the current wrap
-                        // This will be where the transaction presented to the user in the first Ledger popup. 
+                        // This will be where the transaction presented to the user in the first Ledger popup.
                         // This can probably be removed in favor of mapping to the current transaction
                         message.body.params.transaction = wrap;
 
-                        // Set the ledgerGroup in the message to the current group 
+                        // Set the ledgerGroup in the message to the current group
                         // Since the signing will move into the next signs we need to know what group we were supposed to sign
                         message.body.params.ledgerGroup = parseInt(currentGroup);
 
@@ -1333,14 +1329,14 @@ export class Task {
           return InternalMethods[JsonRpcMethod.SaveNetwork](request, sendResponse);
         },
         [JsonRpcMethod.CheckNetwork]: (request: any, sendResponse: Function) => {
-          InternalMethods[JsonRpcMethod.CheckNetwork](request, async (networks) => {           
-            const algodClient =  new algosdk.Algodv2(networks.algod.apiKey, networks.algod.url, networks.algod.port);  
+          InternalMethods[JsonRpcMethod.CheckNetwork](request, async (networks) => {
+            const algodClient =  new algosdk.Algodv2(networks.algod.apiKey, networks.algod.url, networks.algod.port);
             const indexerClient = new algosdk.Indexer(networks.indexer.apiKey, networks.indexer.url, networks.indexer.port);
 
             const responseAlgod = {};
             const responseIndexer = {};
 
-            (async () => { 
+            (async () => {
               await algodClient.status().do()
               .then((response) => {
                   responseAlgod['message'] = response['message'] || response;
@@ -1349,7 +1345,7 @@ export class Task {
                   responseAlgod['error'] = error.message || error;
               });
             })().then(() =>{
-              (async () => { 
+              (async () => {
                 await indexerClient.searchForTransactions().limit(1).do()
                 .then((response) => {
                     responseAlgod['message'] = response['message'] || response;
@@ -1360,7 +1356,7 @@ export class Task {
               })().then(() =>{
                 sendResponse({ algod: responseAlgod, indexer: responseIndexer });
               })
-            }) 
+            })
           });
           return true;
         },

@@ -1,6 +1,10 @@
 /**
  * @jest-environment jsdom
  */
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const chrome = require('sinon-chrome');
+window.chrome = chrome;
+
 import { shallow } from 'enzyme';
 import { html } from 'htm/preact';
 import AssetDetails from './AssetDetails';

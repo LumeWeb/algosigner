@@ -223,7 +223,7 @@ export class InternalMethods {
                 }
               }
             }
-            
+
             // Setup session
             session.wallet = wallet;
             session.ledger = Ledger.MainNet;
@@ -366,16 +366,12 @@ export class InternalMethods {
 
   public static [JsonRpcMethod.LedgerLinkAddress](request: any, sendResponse: Function) {
     const ledger = request.body.params.ledger;
-    extensionBrowser.tabs.create(
+     extensionBrowser.tabs.create(
       {
         active: true,
+          // @ts-ignore
         url: extensionBrowser.extension.getURL(`/index.html#/${ledger}/ledger-hardware-connector`),
-      },
-      (tab) => {
-        // Tab object is created here, but extension popover will close.
-        sendResponse(tab);
-      }
-    );
+      }).then((tab) => sendResponse(tab));
     return true;
   }
 
@@ -490,16 +486,13 @@ export class InternalMethods {
 
     // Transaction wrap will contain response message if from dApp and structure will be different
     const ledger = getLedgerFromGenesisId(request.body.params.transaction.genesisID);
-    extensionBrowser.tabs.create(
+
+      extensionBrowser.tabs.create(
       {
         active: true,
+          // @ts-ignore
         url: extensionBrowser.extension.getURL(`/index.html#/${ledger}/ledger-hardware-sign`),
-      },
-      (tab) => {
-        // Tab object is created here, but extension popover will close.
-        sendResponse(tab);
-      }
-    );
+      }).then((tab) => sendResponse(tab));
   }
 
   public static [JsonRpcMethod.LedgerSaveAccount](request: any, sendResponse: Function) {

@@ -19,6 +19,15 @@ body {
   overflow: auto;
 }
 
+@supports (-moz-appearance:none) {
+    html {
+        width: initial;
+    }
+    body {
+        width: initial;
+    }
+}
+
 // Global font size
 $body-size: 15px;
 
@@ -202,7 +211,7 @@ span[data-tooltip] {
   border-color: $blue-dark;
 }
 
-// Used during the signing tx preview 
+// Used during the signing tx preview
 .truncate-text {
   text-overflow: ellipsis;
   overflow-x: hidden;

@@ -5,10 +5,15 @@ import { extensionBrowser } from '@algosigner/common/chrome';
 export class MessageApi {
   public static listen() {
     switch (PLATFORM) {
-      case 'chrome':
-        extensionBrowser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-          return OnMessageHandler.handle(request, sender, sendResponse);
-        });
+        case 'chrome':
+            extensionBrowser.runtime.onMessage.addListener(async (request, sender) => {
+                let sendResponse;
+                const promise = new Promise((resolve) => {
+                    sendResponse = resolve;
+                })
+                OnMessageHandler.handle(request, sender, sendResponse);
+                return promise;
+            });
         break;
     }
   }
@@ -20,6 +25,6 @@ export class MessageApi {
       if (d.error.data === 'undefined') delete d.error.data;
     }
     var tab_id = d.originTabID || 0;
-    extensionBrowser.tabs.sendMessage(tab_id, d);
+      extensionBrowser.tabs.sendMessage(tab_id, d);
   }
 }

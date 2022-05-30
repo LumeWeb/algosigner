@@ -16,6 +16,8 @@ import { sendMessage } from 'services/Messaging';
 import { StoreContext } from 'services/StoreContext';
 import logotype from 'assets/logotype.png';
 import { getBaseSupportedLedgers } from '@algosigner/common/types/ledgers';
+import {extensionBrowser} from "@algosigner/common/chrome";
+
 
 function deny() {
   const params = {
@@ -45,13 +47,13 @@ const SignWalletTransaction: FunctionalComponent = () => {
   let totalGroups: number = 0;
 
   useEffect(() => {
-    chrome.runtime.onMessage.addListener((request, sender: any) => {
+    extensionBrowser.runtime.onMessage.addListener((request: any, sender): void => {
       // Check if a message has already been recieved
-      if (Object.keys(request).length === 0) return false;
+      if (Object.keys(request).length === 0) return;
 
       // Check if the message is coming from the background script
       if (
-        isFromExtension(sender.origin) &&
+        isFromExtension(sender) &&
         request.body.method == JsonRpcMethod.SignWalletTransaction
       ) {
         setRequest(request);

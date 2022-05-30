@@ -5,6 +5,7 @@ import { route } from 'preact-router';
 import { autorun } from 'mobx';
 import { JsonRpcMethod } from '@algosigner/common/messaging/types';
 import { sendMessage } from 'services/Messaging';
+import {extensionBrowser} from "@algosigner/common/chrome";
 
 export const StoreContext = createContext(undefined);
 
@@ -45,7 +46,7 @@ export const StoreProvider = ({ children }) => {
             callback(response);
           });
         } catch (e) {
-          const errorMsg = chrome.runtime.lastError || (e as any).message;
+          const errorMsg = extensionBrowser.runtime.lastError || (e as any).message;
           callback({ error: errorMsg });
         }
       } else {

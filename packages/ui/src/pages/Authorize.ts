@@ -6,9 +6,10 @@ import { JsonRpcMethod } from '@algosigner/common/messaging/types';
 import { StoreContext } from 'services/StoreContext';
 
 import logotype from 'assets/logotype.png';
+import {extensionBrowser} from "@algosigner/common/chrome";
 
 function deny() {
-  chrome.runtime.sendMessage({
+    extensionBrowser.runtime.sendMessage({
     source: 'extension',
     body: {
       jsonrpc: '2.0',
@@ -29,7 +30,7 @@ const Authorize: FunctionalComponent = (props) => {
 
   useEffect(() => {
     // eslint-disable-next-line no-unused-vars
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      extensionBrowser.runtime.onMessage.addListener((request, sendResponse) => {
       if (request.body.method == JsonRpcMethod.Authorization) {
         setRequest(request);
         store.saveRequest(request);
@@ -49,7 +50,7 @@ const Authorize: FunctionalComponent = (props) => {
 
   const grant = () => {
     window.removeEventListener('beforeunload', deny);
-    chrome.runtime.sendMessage({
+    extensionBrowser.runtime.sendMessage({
       source: 'extension',
       body: {
         jsonrpc: '2.0',

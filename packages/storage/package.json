@@ -9,10 +9,14 @@
     "ts-loader": "^9.2.6",
     "typescript": "^4.4.4",
     "webpack": "^5.58.2",
-    "webpack-cli": "^4.9.0"
+    "webpack-cli": "^4.9.0",
+    "@types/webextension-polyfill": "^0.8.3"
   },
   "scripts": {
     "build": "npm run clean && webpack",
     "clean": "rm -rf ./dist/"
+  },
+  "dependencies": {
+    "webextension-polyfill": "github:LumeWeb/webextension-polyfill"
   }
 }

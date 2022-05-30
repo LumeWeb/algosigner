@@ -14,7 +14,7 @@ test('Logging test', () => {
 
 test('Test extension parts', () => {
   extensionBrowser.runtime.id = '12345';
-  expect(isFromExtension('chrome-extension://12345')).toBe(true);
+  expect(isFromExtension({url: "chrome-extension://12345", id: '12345'})).toBe(true);
 });
 
 test('Type - RequestErrors undefined test', () => {

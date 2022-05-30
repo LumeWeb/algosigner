@@ -17,18 +17,17 @@ export class ExtensionStorage {
   // Callback: Callback will return a boolean of true if storage sets without error
   // or false otherwise.
   ///
-  public setStorage(objectName: string, saveObject: Object, callback: Function) {
-    extensionBrowser.storage.local.set({ [objectName]: saveObject }, () => {
+  public async setStorage(objectName: string, saveObject: Object, callback: Function): Promise<void> {
+      await extensionBrowser.storage.local.set({[objectName]: saveObject});
       const isSuccessful = !extensionBrowser.runtime.lastError;
       if (!isSuccessful) {
-        logging.log(
-          extensionBrowser.runtime.lastError &&
-            `Chrome error: ${extensionBrowser.runtime.lastError.message}`
-        );
+          logging.log(
+              extensionBrowser.runtime.lastError &&
+              `Chrome error: ${extensionBrowser.runtime.lastError.message}`
+          );
       }
 
       callback && callback(isSuccessful);
-    });
   }
 
   ///
@@ -36,39 +35,36 @@ export class ExtensionStorage {
   // Callback: Callback will return a boolean of true if an account exists
   // or false if no account is present.
   ///
-  public getStorage(objectName: string, callback: Function) {
-    extensionBrowser.storage.local.get([objectName], (result: any) => {
-      callback && callback(result[objectName]);
-    });
-  }
+    public async getStorage(objectName: string, callback: Function) {
+        const result = await extensionBrowser.storage.local.get([objectName]);
+        callback && callback(result[objectName]);
+    }
 
   ///
   // Check for the existance of a wallet account.
   // Callback: Callback will return a boolean of true if an account exists
   // or false if no account is present.
   ///
-  public noAccountExistsCheck(objectName: string, callback: Function) {
-    extensionBrowser.storage.local.get([objectName], function (result: any) {
-      if (result[objectName]) {
-        callback && callback(true);
-      } else {
-        callback && callback(false);
-      }
-    });
-  }
+    public noAccountExistsCheck(objectName: string, callback: Function) {
+        const result = extensionBrowser.storage.local.get([objectName]);
+        if (result[objectName]) {
+            callback && callback(true);
+        } else {
+            callback && callback(false);
+        }
+    }
 
   ///
   // Clear storage.local extension data.
   // Callback: Callback will return true if successful, false if there is an error.
   ///
-  public clearStorageLocal(callback: Function) {
-    extensionBrowser.storage.local.clear(() => {
+  public async clearStorageLocal(callback: Function) {
+      await extensionBrowser.storage.local.clear();
       if (!extensionBrowser.runtime.lastError) {
-        callback && callback(true);
+          callback && callback(true);
       } else {
-        callback && callback(false);
+          callback && callback(false);
       }
-    });
   }
 
   ///
@@ -76,13 +72,12 @@ export class ExtensionStorage {
   // View raw storage.local extension data.
   // Callback: Callback will return all data stored for the extension.
   ///
-  protected getStorageLocal(callback: Function) {
-    extensionBrowser.storage.local.get(null, (result: any) => {
-      if (!extensionBrowser.runtime.lastError) {
-        callback(JSON.stringify(result));
-      }
-    });
-  }
+    protected async getStorageLocal(callback: Function) {
+        const result = await extensionBrowser.storage.local.get(null);
+        if (!extensionBrowser.runtime.lastError) {
+            callback(JSON.stringify(result));
+        }
+    }
 }
 const extensionStorage = new ExtensionStorage();
 export default extensionStorage;
